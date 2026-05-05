@@ -1,0 +1,153 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email.lower() == 'mcgeehayjay@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Pillar 2: Validation Blueprints
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'displayName', 'createdAt']) &&
+             data.keys().size() >= 5 &&
+             data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 200 &&
+             data.role in ['user', 'admin'] &&
+             data.displayName is string && data.displayName.size() <= 200 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['userId', 'userEmail', 'productId', 'productName', 'productImage', 'totalAmount', 'status', 'measurements', 'shippingAddress', 'createdAt', 'updatedAt', 'shippingPaid', 'paystackReference']) &&
+             data.userId == request.auth.uid &&
+             data.userEmail is string && data.userEmail.size() <= 200 &&
+             data.productId is number &&
+             data.productName is string && data.productName.size() <= 200 &&
+             data.productImage is string && data.productImage.size() <= 1000 &&
+             data.totalAmount is number &&
+             data.status in ['pending', 'in-progress', 'ready-for-shipping', 'shipped'] &&
+             data.shippingPaid is bool &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp &&
+             data.paystackReference is string &&
+             isValidMeasurements(data.measurements) &&
+             isValidAddress(data.shippingAddress) &&
+             (data.keys().hasOnly(['userId', 'userEmail', 'productId', 'productName', 'productImage', 'totalAmount', 'status', 'measurements', 'shippingAddress', 'createdAt', 'updatedAt', 'shippingPaid', 'paystackReference']) || 
+              data.keys().hasOnly(['userId', 'userEmail', 'productId', 'productName', 'productImage', 'totalAmount', 'status', 'measurements', 'shippingAddress', 'createdAt', 'updatedAt', 'shippingPaid', 'paystackReference', 'shippingPaystackRef']));
+    }
+
+    function isValidMeasurements(m) {
+      return m.keys().hasAll(['bust', 'waist', 'hip', 'shoulder', 'fullLength', 'nippleToNipple', 'bustPoint', 'underBust', 'halfLength', 'underBustRound', 'kneeLength', 'sleeveLength', 'roundArm', 'roundElbow', 'wrist']) &&
+             m.bust is string && m.bust.size() <= 50 &&
+             m.waist is string && m.waist.size() <= 50 &&
+             m.hip is string && m.hip.size() <= 50 &&
+             m.shoulder is string && m.shoulder.size() <= 50 &&
+             m.fullLength is string && m.fullLength.size() <= 50 &&
+             m.nippleToNipple is string && m.nippleToNipple.size() <= 50 &&
+             m.bustPoint is string && m.bustPoint.size() <= 50 &&
+             m.underBust is string && m.underBust.size() <= 50 &&
+             m.halfLength is string && m.halfLength.size() <= 50 &&
+             m.underBustRound is string && m.underBustRound.size() <= 50 &&
+             m.kneeLength is string && m.kneeLength.size() <= 50 &&
+             m.sleeveLength is string && m.sleeveLength.size() <= 50 &&
+             m.roundArm is string && m.roundArm.size() <= 50 &&
+             m.roundElbow is string && m.roundElbow.size() <= 50 &&
+             m.wrist is string && m.wrist.size() <= 50;
+    }
+
+    function isValidAddress(a) {
+      return a.keys().hasAll(['street', 'city', 'state', 'country']) &&
+             a.street is string && a.street.size() <= 500 &&
+             a.city is string && a.city.size() <= 200 &&
+             a.state is string && a.state.size() <= 200 &&
+             a.country is string && a.country.size() <= 200;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll(['name', 'email', 'phone', 'eventDate', 'lookType', 'consultationDate', 'preferredTime', 'source', 'notes', 'createdAt']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.phone is string && data.phone.size() <= 50 &&
+             data.eventDate is string &&
+             data.lookType is string &&
+             data.consultationDate is string &&
+             data.preferredTime is string &&
+             data.source is string &&
+             data.notes is string &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidPayment(data) {
+      return data.keys().hasAll(['userId', 'userEmail', 'amount', 'reference', 'status', 'type', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.userEmail is string &&
+             data.amount is number &&
+             data.reference is string &&
+             data.status is string &&
+             data.type in ['Product Reservation', 'Shipping Logistics'] &&
+             data.createdAt is timestamp;
+    }
+
+    // Rules for collections
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().role == 'user';
+      allow update: if (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt']) && incoming().updatedAt == request.time) || isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidOrder(incoming()) && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        (isOwner(existing().userId) && incoming().diff(existing()).affectedKeys().hasOnly(['shippingPaid', 'updatedAt', 'shippingPaystackRef']) && incoming().updatedAt == request.time)
+      );
+    }
+
+    match /bookings/{bookingId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidBooking(incoming());
+    }
+
+    match /admins/{userId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow get, list: if isAdmin();
+      allow create: if isSignedIn() && isValidPayment(incoming());
+    }
+  }
+}

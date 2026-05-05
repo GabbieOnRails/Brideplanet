@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@100;300;400;700;900&family=Great+Vibes&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", serif;
+  --font-sans: "Montserrat", sans-serif;
+  --font-script: "Great Vibes", cursive;
+
+  --color-brand-offwhite: #F8F7F4;
+  --color-brand-beige: #E2E0D9;
+  --color-brand-sand: #D5D2C8;
+  --color-brand-charcoal: #151515;
+  --color-brand-grey: #959595;
+  
+  --animate-fade-in: fade-in 0.8s ease-out;
+  --animate-slide-up: slide-up 1s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-brand-offwhite text-brand-charcoal;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-black tracking-tighter uppercase;
+  }
+}
+
+.editorial-heading {
+  @apply font-sans font-black uppercase tracking-tighter leading-[0.85];
+}
+
+.editorial-heading-bg {
+  @apply font-sans font-black uppercase tracking-tighter leading-[0.85] text-brand-charcoal/5 select-none pointer-events-none;
+}
+
+.script-subheading {
+  @apply font-serif italic normal-case tracking-normal text-brand-grey lowercase;
+}
+
+.btn-editorial {
+  @apply px-10 py-4 bg-brand-charcoal text-white text-[11px] uppercase tracking-[0.3em] font-bold hover:bg-brand-charcoal/80 transition-all duration-500 rounded-none;
+}
+
+.btn-outline-editorial {
+  @apply px-10 py-4 border border-brand-charcoal/20 text-brand-charcoal text-[11px] uppercase tracking-[0.3em] font-bold hover:bg-brand-charcoal hover:text-white transition-all duration-500 rounded-none;
+}
+
+.masonry-item {
+  break-inside: avoid;
+  margin-bottom: 1rem;
+}
+
+.masonry-container {
+  column-count: 2;
+  column-gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .masonry-container {
+    column-count: 3;
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order for a bespoke bridal dress",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "productId": { "type": "number" },
+        "productName": { "type": "string" },
+        "productImage": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "status": { 
+          "type": "string", 
+          "enum": ["pending", "in-progress", "ready-for-shipping", "shipped"] 
+        },
+        "measurements": {
+          "type": "object",
+          "properties": {
+            "bust": { "type": "string" },
+            "waist": { "type": "string" },
+            "hip": { "type": "string" },
+            "shoulder": { "type": "string" },
+            "fullLength": { "type": "string" },
+            "nippleToNipple": { "type": "string" },
+            "bustPoint": { "type": "string" },
+            "underBust": { "type": "string" },
+            "halfLength": { "type": "string" },
+            "underBustRound": { "type": "string" },
+            "kneeLength": { "type": "string" },
+            "sleeveLength": { "type": "string" },
+            "roundArm": { "type": "string" },
+            "roundElbow": { "type": "string" },
+            "wrist": { "type": "string" },
+            "additionalNotes": { "type": "string" }
+          },
+          "required": ["bust", "waist", "hip", "shoulder", "fullLength", "nippleToNipple", "bustPoint", "underBust", "halfLength", "underBustRound", "kneeLength", "sleeveLength", "roundArm", "roundElbow", "wrist"]
+        },
+        "shippingAddress": {
+          "type": "object",
+          "properties": {
+            "street": { "type": "string" },
+            "city": { "type": "string" },
+            "state": { "type": "string" },
+            "country": { "type": "string" },
+            "postalCode": { "type": "string" }
+          },
+          "required": ["street", "city", "state", "country"]
+        },
+        "expectedCompletionDate": { "type": "string", "format": "date" },
+        "shippingFee": { "type": "number" },
+        "shippingPaid": { "type": "boolean" },
+        "expectedDeliveryDate": { "type": "string", "format": "date" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "productId", "productName", "productImage", "totalAmount", "status", "measurements", "shippingAddress", "createdAt", "updatedAt", "shippingPaid"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A consultation request from a potential client",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "eventDate": { "type": "string", "format": "date" },
+        "lookType": { "type": "string" },
+        "consultationDate": { "type": "string", "format": "date" },
+        "preferredTime": { "type": "string" },
+        "source": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "phone", "eventDate", "lookType", "consultationDate", "createdAt"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "A payment record from Paystack",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "orderId": { "type": "string" },
+        "amount": { "type": "number" },
+        "reference": { "type": "string" },
+        "status": { "type": "string" },
+        "type": { "type": "string", "enum": ["Product Reservation", "Shipping Logistics"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "amount", "reference", "status", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer orders"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Consultation bookings"
+    },
+    "/admins/{userId}": {
+      "schema": { "type": "object", "properties": { "email": { "type": "string" } } },
+      "description": "RBAC for administrators"
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Transaction logs"
+    }
+  }
+}
