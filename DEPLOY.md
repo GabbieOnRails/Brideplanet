@@ -5,6 +5,7 @@ This application is prepared for deployment on modern cPanel hosting with Node.j
 ## Prerequisites
 1. Ensure your cPanel plan includes the **Setup Node.js App** feature.
 2. Your domain (`bridexxplanet.com`) should be pointed to your hosting.
+3. **Resend Email Support**: Your domain must be verified in the Resend dashboard. Note that the application is configured to send from **`shop.bridexxplanet.com`**. Ensure this specific subdomain is verified in your [Resend Domains dashboard](https://resend.com/domains).
 
 ## Deployment Steps
 
@@ -24,6 +25,15 @@ Upload the following files/folders to your Application Root (usually a folder li
 6. **Application URL**: `bridexxplanet.com`
 7. **Application startup file**: `app.js`
 8. **Environment variables**: Add all keys from `.env.example` manually here or via the `.env` file if supported.
+
+### 5. Finalize Firebase Auth (Mandatory)
+If you are using a custom domain like `bridexxplanet.com`:
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Select your project (**gen-lang-client-0982158901**).
+3. Go to **Authentication** > **Settings** > **Authorized Domains**.
+4. Click **Add Domain** and enter **`bridexxplanet.com`**.
+5. Also add **`www.bridexxplanet.com`** if applicable.
+Without this step, Google Login and other authentication features will fail or time out on your custom domain.
 
 ### 3. Install Dependencies
 1. Once the application is created, click the **Run npm install** button in the cPanel Node.js interface.
