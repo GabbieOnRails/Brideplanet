@@ -26,17 +26,18 @@ Upload the following files/folders to your Application Root (usually a folder li
 7. **Application startup file**: `app.js`
 8. **Environment variables**: Add all keys from `.env.example` manually here or via the `.env` file if supported.
 
-### 5. Finalize Firebase Auth (CRITICAL)
-Your login **will fail** with an "internal error" unless these domains are added to Firebase:
-1. Go to the [Firebase Console](https://console.firebase.google.com/).
-2. Select your project (**gen-lang-client-0982158901**).
-3. Go to **Authentication** > **Settings** > **Authorized Domains**.
-4. Click **Add Domain** and add THESE EXACT DOMAINS:
-   *   **`brideplanet.vercel.app`** (your production URL)
-   *   **`bridexxplanet.com`** (your custom domain)
-   *   **`www.bridexxplanet.com`**
+### 5. Finalize Firebase Auth (CRITICAL - DO NOT SKIP)
+If you see "Internal Error" or a Timeout during login on your production site, it is because Firebase is blocking the connection. You MUST authorize your domains:
 
-**Why this is happening:** Firebase blocks login popups on any domain that isn't on this "VIP list" to protect your security.
+1.  Go to the [Firebase Console](https://console.firebase.google.com/).
+2.  Select your project (**gen-lang-client-0982158901**).
+3.  Navigate to **Authentication** > **Settings** > **Authorized Domains**.
+4.  Click **Add Domain** and add these EXACTly:
+    *   `brideplanet.vercel.app`
+    *   `bridexxplanet.com`
+    *   `www.bridexxplanet.com`
+
+**Pro-Tip for Vercel:** If it still fails, ensure your environment variables (starting with `VITE_`) are added in **Vercel Project Settings > Environment Variables** and that you have triggered a **New Deployment** after adding them.
 
 ### 3. Install Dependencies
 1. Once the application is created, click the **Run npm install** button in the cPanel Node.js interface.

@@ -5,6 +5,8 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   updateProfile
 } from 'firebase/auth';
@@ -19,6 +21,7 @@ export default function LoginPage() {
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showRedirectOption, setShowRedirectOption] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -76,18 +79,70 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       const { user } = await signInWithPopup(auth, provider);
+      await finishSocialLogin(user);
+    } catch (err: any) {
+      console.error("Popup login failed:", err);
       
-      // Check if user exists in firestore, if not create
-      const userRef = doc(db, 'users', user.uid);
-      
-      let userSnap;
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/internal-error' || err.message?.includes('timeout')) {
+        setError("Sign-in popup was blocked or timed out. Please use the 'Redirect Method' below or ensure third-party cookies are enabled.");
+        setShowRedirectOption(true);
+      } else {
+        setError(err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleRedirect = async () => {
+    setLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (err: any) {
+      setError("Redirect failed: " + err.message);
+      setLoading(false);
+    }
+  };
+
+  const finishSocialLogin = async (user: any) => {
+    // Check if user exists in firestore, if not create
+    const userRef = doc(db, 'users', user.uid);
+    
+    let userSnap;
+    try {
+      userSnap = await getDoc(userRef);
+    } catch (err: any) {
+      // Structured error for permission debugging
+      const errInfo = {
+        error: err.message,
+        operationType: 'get',
+        path: `users/${user.uid}`,
+        authInfo: {
+          userId: user.uid,
+          email: user.email,
+          emailVerified: user.emailVerified
+        }
+      };
+      console.error('Firestore Permission Error:', JSON.stringify(errInfo));
+      throw new Error(JSON.stringify(errInfo));
+    }
+    
+    if (!userSnap.exists()) {
+      const userData = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || 'User',
+        role: user.email?.toLowerCase() === 'mcgeehayjay@gmail.com' ? 'admin' : 'user',
+        createdAt: serverTimestamp()
+      };
+
       try {
-        userSnap = await getDoc(userRef);
+        await setDoc(userRef, userData);
       } catch (err: any) {
-        // Structured error for permission debugging
         const errInfo = {
           error: err.message,
-          operationType: 'get',
+          operationType: 'write',
           path: `users/${user.uid}`,
           authInfo: {
             userId: user.uid,
@@ -95,65 +150,36 @@ export default function LoginPage() {
             emailVerified: user.emailVerified
           }
         };
-        console.error('Firestore Permission Error:', JSON.stringify(errInfo));
+        console.error('Firestore Permission Error during creation:', JSON.stringify(errInfo));
         throw new Error(JSON.stringify(errInfo));
       }
-      
-      if (!userSnap.exists()) {
-        const userData = {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || 'User',
-          role: user.email?.toLowerCase() === 'mcgeehayjay@gmail.com' ? 'admin' : 'user',
-          createdAt: serverTimestamp()
-        };
-
-        try {
-          await setDoc(userRef, userData);
-        } catch (err: any) {
-          const errInfo = {
-            error: err.message,
-            operationType: 'write',
-            path: `users/${user.uid}`,
-            authInfo: {
-              userId: user.uid,
-              email: user.email,
-              emailVerified: user.emailVerified
-            }
-          };
-          console.error('Firestore Permission Error during creation:', JSON.stringify(errInfo));
-          throw new Error(JSON.stringify(errInfo));
-        }
-      } else if (user.email?.toLowerCase() === 'mcgeehayjay@gmail.com' && userSnap.data()?.role !== 'admin') {
-        // Ensure existing admin account has the correct role in DB
-        await setDoc(userRef, { role: 'admin' }, { merge: true });
-      }
-      
-      if (user.email?.toLowerCase() === 'mcgeehayjay@gmail.com') {
-        navigate('/admin', { replace: true });
-      } else {
-        navigate(from, { replace: true });
-      }
-    } catch (err: any) {
-      console.error("Login failed:", err);
-      
-      if (err.code === 'auth/internal-error' || err.message?.includes('internal-error')) {
-        setError("Firebase Internal Error: This usually means the current domain is not authorized in the Firebase Console, or popups are blocked. Try opening the app in a new tab.");
-        setLoading(false);
-        return;
-      }
-
-      // Try to parse JSON if it's our structured error
-      try {
-        const parsed = JSON.parse(err.message);
-        setError(`Permission Denied: ${parsed.operationType} on ${parsed.path}`);
-      } catch {
-        setError(err.message);
-      }
-    } finally {
-      setLoading(false);
+    } else if (user.email?.toLowerCase() === 'mcgeehayjay@gmail.com' && userSnap.data()?.role !== 'admin') {
+      // Ensure existing admin account has the correct role in DB
+      await setDoc(userRef, { role: 'admin' }, { merge: true });
+    }
+    
+    if (user.email?.toLowerCase() === 'mcgeehayjay@gmail.com') {
+      navigate('/admin', { replace: true });
+    } else {
+      navigate(from, { replace: true });
     }
   };
+
+  // Handle redirect result on mount
+  React.useEffect(() => {
+    const checkRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          await finishSocialLogin(result.user);
+        }
+      } catch (err: any) {
+        console.error("Redirect check failed:", err);
+        setError(err.message);
+      }
+    };
+    checkRedirect();
+  }, []);
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-20 bg-neutral-100/50">
@@ -236,14 +262,33 @@ export default function LoginPage() {
           <div className="flex-grow h-px bg-neutral-100"></div>
         </div>
 
-        <button 
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-          className="w-full border border-neutral-100 py-5 rounded-xl text-[10px] uppercase tracking-[0.2em] font-black text-brand-charcoal hover:bg-neutral-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-        >
-          <Chrome size={16} />
-          {isLogin ? 'Sign in with Google' : 'Sign up with Google'}
-        </button>
+        {showRedirectOption ? (
+          <div className="space-y-4">
+            <button 
+              onClick={handleGoogleRedirect}
+              disabled={loading}
+              className="w-full bg-brand-charcoal text-white py-5 rounded-xl text-[10px] uppercase tracking-[0.2em] font-black hover:bg-brand-rose transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              <Chrome size={16} />
+              {loading ? 'Redirecting...' : 'Use Redirect Method'}
+            </button>
+            <button 
+              onClick={() => setShowRedirectOption(false)}
+              className="w-full text-center text-[9px] uppercase tracking-widest font-black text-brand-charcoal/40 hover:text-brand-charcoal transition-colors"
+            >
+              Back to Standard Login
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full border border-neutral-100 py-5 rounded-xl text-[10px] uppercase tracking-[0.2em] font-black text-brand-charcoal hover:bg-neutral-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+          >
+            <Chrome size={16} />
+            {isLogin ? 'Sign in with Google' : 'Sign up with Google'}
+          </button>
+        )}
 
         <p className="mt-10 text-center text-[10px] uppercase tracking-widest font-bold text-brand-charcoal/40">
           {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}

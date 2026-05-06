@@ -13,13 +13,16 @@ const actualConfig = {
   databaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId 
 };
 
-// Log config keys (not values) in production for debugging
+// Ensure databaseId is not empty string (fallback to default if undefined/empty)
+const finalDatabaseId = actualConfig.databaseId || firebaseConfig.firestoreDatabaseId;
+
+// Log config status (not sensitive values) for production debugging
 if (import.meta.env.PROD) {
-  console.log("Firebase initialized with:", Object.keys(actualConfig).filter(k => !!(actualConfig as any)[k]));
+  console.log("Firebase initialized. AuthDomain:", actualConfig.authDomain);
 }
 
 const app = initializeApp(actualConfig);
-export const db = getFirestore(app, actualConfig.databaseId);
+export const db = getFirestore(app, finalDatabaseId);
 export const auth = getAuth(app);
 
 // Connectivity check as requested in instructions
