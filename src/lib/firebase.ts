@@ -10,8 +10,13 @@ const actualConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
-  firestoreDatabaseId: firebaseConfig.firestoreDatabaseId // This is usually better kept as is or passed separately
+  firestoreDatabaseId: firebaseConfig.firestoreDatabaseId 
 };
+
+// Debug log to help identify if environment variables are missing
+if (!import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.PROD) {
+  console.warn("Firebase: Using fallback configuration. Ensure VITE_FIREBASE_API_KEY is set in environment secrets.");
+}
 
 const app = initializeApp(actualConfig);
 export const db = getFirestore(app, actualConfig.firestoreDatabaseId || firebaseConfig.firestoreDatabaseId);

@@ -136,6 +136,13 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error("Login failed:", err);
+      
+      if (err.code === 'auth/internal-error' || err.message?.includes('internal-error')) {
+        setError("Firebase Internal Error: This usually means the current domain is not authorized in the Firebase Console, or popups are blocked. Try opening the app in a new tab.");
+        setLoading(false);
+        return;
+      }
+
       // Try to parse JSON if it's our structured error
       try {
         const parsed = JSON.parse(err.message);
