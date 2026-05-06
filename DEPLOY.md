@@ -26,14 +26,17 @@ Upload the following files/folders to your Application Root (usually a folder li
 7. **Application startup file**: `app.js`
 8. **Environment variables**: Add all keys from `.env.example` manually here or via the `.env` file if supported.
 
-### 5. Finalize Firebase Auth (Mandatory)
-If you are using a custom domain like `bridexxplanet.com`:
+### 5. Finalize Firebase Auth (CRITICAL)
+Your login **will fail** with an "internal error" unless these domains are added to Firebase:
 1. Go to the [Firebase Console](https://console.firebase.google.com/).
 2. Select your project (**gen-lang-client-0982158901**).
 3. Go to **Authentication** > **Settings** > **Authorized Domains**.
-4. Click **Add Domain** and enter **`bridexxplanet.com`**.
-5. Also add **`www.bridexxplanet.com`** if applicable.
-Without this step, Google Login and other authentication features will fail or time out on your custom domain.
+4. Click **Add Domain** and add THESE EXACT DOMAINS:
+   *   **`brideplanet.vercel.app`** (your production URL)
+   *   **`bridexxplanet.com`** (your custom domain)
+   *   **`www.bridexxplanet.com`**
+
+**Why this is happening:** Firebase blocks login popups on any domain that isn't on this "VIP list" to protect your security.
 
 ### 3. Install Dependencies
 1. Once the application is created, click the **Run npm install** button in the cPanel Node.js interface.
